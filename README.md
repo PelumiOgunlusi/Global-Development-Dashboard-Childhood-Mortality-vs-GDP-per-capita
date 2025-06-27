@@ -18,7 +18,10 @@ The dashboard allows users to analyze trends in child mortality, compare GDP per
 
 Open `final_project.qmd` in Quarto and render the dashboard. Requires Python, pandas, plotly, itables, and country_converter.
 
+## Dashboard Link
+
+[View the interactive dashboard](https://pelumiogunlusi.github.io/Global-Development-Dashboard-Childhood-Mortality-vs-GDP-per-capita/final_project.html)
+
 ## Author
 
 Pelumi Ogunlusi
-
