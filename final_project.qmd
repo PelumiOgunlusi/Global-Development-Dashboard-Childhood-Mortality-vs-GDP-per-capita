@@ -1,0 +1,357 @@
+---
+title: "Global Development Dashboard: Childhood Mortality vs Economic Development"  
+format: dashboard   
+author: PELUMI OGUNLUSI
+theme: vapor
+---
+
+```{python}
+# Importing necessary libraries
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import itables
+import country_converter as coco
+```
+
+
+```{python}
+# Load the data
+gdp = pd.read_csv('data/gdp_pcap.csv')
+cmort = pd.read_csv('data/child_mortality_0_5_year_olds_dying_per_1000_born.csv')
+```
+
+```{python}
+# 1. Trend of Child Mortality Over Time (Global)
+cmort_long = cmort.melt(id_vars=['country'], var_name='Year', value_name='Child Mortality')
+cmort_long['Year'] = cmort_long['Year'].astype(int)
+global_trend = cmort_long.groupby('Year')['Child Mortality'].mean().reset_index()
+fig1 = px.line(global_trend, x='Year', y='Child Mortality',
+               title='Global Average Child Mortality Over Time',
+               labels={'Child Mortality': 'Deaths per 1000 Born'})
+```
+
+```{python}
+# 2. Child Mortality by Country (Latest Year)
+latest_data = cmort_long.query("Year == 2025").sort_values(
+    "Child Mortality", ascending=False
+)
+fig2 = px.bar(
+    latest_data.head(20),
+    x="Child Mortality",
+    y="country",
+    title="Top 20 Countries with the highest Childhood Mortality in 2025",
+    labels={"Child Mortality": "Deaths per 1000 Born"},
+)
+```
+
+```{python}
+# 3. Geographic Distribution (Choropleth Map)
+# Convert country names to ISO codes for mapping
+latest_data['iso_alpha'] = coco.convert(names=latest_data['country'], to='ISO3')
+fig3 = px.choropleth(latest_data, locations='iso_alpha', color='Child Mortality',
+                     hover_name='country',
+                     color_continuous_scale='Reds',
+                     title='Global Child Mortality Rates (2025)')
+```
+
+```{python}
+# 4. Distribution of Child Mortality (Histogram)
+fig4 = px.histogram(cmort_long, x='Child Mortality', nbins=50,
+                    title='Distribution of Child Mortality Rates across the entire dataset',
+                    labels={'Child Mortality': 'Deaths per 1000 Born'})
+```
+
+```{python}
+# Compute highest life expectancy
+highest_row = latest_data.head(1).squeeze()
+highest_child_mortality_country = highest_row["country"]
+highest_child_mortality_value = round(highest_row["Child Mortality"], 1)
+```
+
+```{python}
+# Compute lowest life expectancy
+lowest_row = latest_data.sort_values("Child Mortality", ascending=True).head(1).squeeze()
+lowest_child_mortality_country = lowest_row["country"]
+lowest_child_mortality_value = round(lowest_row["Child Mortality"], 1)
+```
+
+```{python}
+# Compute average child mortality across all countries
+Childhood_mean = latest_data["Child Mortality"].mean()
+average_childhood_mortality_value = round(Childhood_mean, 1)
+```
+
+# Child mortality
+
+## Row 1 {height=30%}
+
+::: {.valuebox color="#5ba3b6" title="Highest Childhood Mortality rate" icon="graph-up-arrow"}
+
+`{python} str(highest_child_mortality_value)`
+
+`{python} highest_child_mortality_country`
+
+:::
+
+::: {.valuebox color="primary" title="Lowest Childhood Mortality rate" icon="graph-down-arrow"} 
+
+`{python} str(lowest_child_mortality_value)`
+
+`{python} lowest_child_mortality_country`
+
+:::
+
+::: {.valuebox color="secondary" title="Average Childhood Mortality rate" icon="file-earmark-bar-graph"}
+
+`{python} str(average_childhood_mortality_value)`
+
+:::
+
+
+## Row 2 {height=70%}
+
+### {.tabset width=50%}
+#### Chloropleth Map
+```{python}
+fig3
+```
+#### Child mortality by country
+```{python}
+fig2
+```
+
+### {.tabset width=50%}
+#### Childhood mortality over time
+```{python}
+fig1
+```
+
+#### Distribution of childhood mortality
+```{python}
+fig4
+```
+
+# GDP
+
+```{python}
+# Preparing GDP data for analysis
+gdp_long = gdp.melt(id_vars=['country'], var_name='Year', value_name='GDP per Capita')
+gdp_long['Year'] = gdp_long['Year'].astype(int)
+```
+
+```{python}
+# Convert 'GDP per Capita' to numeric, handling 'k' and coercing errors
+gdp_long['GDP per Capita'] = gdp_long['GDP per Capita'].astype(str).str.replace('k', 'e3')
+gdp_long['GDP per Capita'] = pd.to_numeric(gdp_long['GDP per Capita'], errors='coerce')
+```
+
+```{python}
+# Global GDP per Capita Trend Over Time
+global_gdp_trend = gdp_long.groupby('Year')['GDP per Capita'].mean().reset_index()
+fig_gdp1 = px.line(global_gdp_trend, x='Year', y='GDP per Capita',
+                   title='Global Average GDP per Capita Over Time',
+                   labels={'GDP per Capita': 'USD'})
+```
+
+```{python}
+# Top 20 Countries by GDP per Capita (Latest Year)
+latest_gdp = gdp_long.query("Year == 2025").sort_values("GDP per Capita", ascending=False)
+fig_gdp2 = px.bar(latest_gdp.head(20), x="GDP per Capita", y="country",
+                  title="Top 20 Countries by GDP per Capita in 2025",
+                  labels={"GDP per Capita": "USD"})
+```
+
+```{python}
+# GDP per Capita Distribution (Histogram)
+fig_gdp3 = px.histogram(gdp_long, x='GDP per Capita', nbins=50,
+                        title='Distribution of GDP per Capita across the entire dataset',
+                        labels={'GDP per Capita': 'USD'})
+```
+
+```{python}
+# GDP per Capita Choropleth Map (Latest Year)
+latest_gdp['iso_alpha'] = coco.convert(names=latest_gdp['country'], to='ISO3')
+fig_gdp4 = px.choropleth(latest_gdp, locations='iso_alpha', color='GDP per Capita',
+                         hover_name='country',
+                         color_continuous_scale='Viridis',
+                         title='Global GDP per Capita (2025)')
+```
+
+```{python}
+# Compute GDP summary statistics for 2025
+highest_gdp_row = latest_gdp.head(1).squeeze()
+highest_gdp_country = highest_gdp_row["country"]
+highest_gdp_value = round(highest_gdp_row["GDP per Capita"], 1)
+
+lowest_gdp_row = latest_gdp.sort_values("GDP per Capita", ascending=True).head(1).squeeze()
+lowest_gdp_country = lowest_gdp_row["country"]
+lowest_gdp_value = round(lowest_gdp_row["GDP per Capita"], 1)
+
+average_gdp_value = round(latest_gdp["GDP per Capita"].mean(), 1)
+```
+
+## Row 1 {height=30%}
+
+::: {.valuebox color="#ff77a9" title="Highest GDP" icon="graph-up-arrow"}
+
+`{python} str(highest_gdp_value)`
+
+`{python} highest_gdp_country`
+
+:::
+
+::: {.valuebox color="#690375" title="Lowest GDP" icon="graph-down-arrow"} 
+
+`{python} str(lowest_gdp_value)`
+
+`{python} lowest_gdp_country`
+
+:::
+
+::: {.valuebox color="#00ccff" title="Average GDP" icon="file-earmark-bar-graph"}
+
+`{python} str(average_gdp_value)`
+
+:::
+
+
+## Row 2 {height=70%}
+
+### {.tabset width=50%}
+#### Map of Countries by GDP
+```{python}
+fig_gdp4
+```
+#### Countries with top 20 GDP
+```{python}
+fig_gdp2
+```
+
+### {.tabset width=50%}
+#### GDP per capita over time
+```{python}
+fig_gdp1
+```
+
+#### Distribution of GDP in the entire dataset
+```{python}
+fig_gdp3
+```
+
+
+# Relationship
+
+```{python}
+# Merge GDP and Child Mortality data for analysis
+merged = pd.merge(
+    cmort_long, gdp_long, on=["country", "Year"], how="inner"
+).dropna(subset=["GDP per Capita", "Child Mortality"])
+```
+
+```{python}
+# Scatter plot: GDP per Capita vs Child Mortality (Latest Year)
+latest_merged = merged[merged["Year"] == 2025]
+fig_rel1 = px.scatter(
+    latest_merged,  
+    x="GDP per Capita",
+    y="Child Mortality",
+    trendline='expanding',
+    hover_name="country",
+    title="GDP per Capita vs Child Mortality (2025)",
+    labels={"GDP per Capita": "GDP per Capita (USD)", "Child Mortality": "Deaths per 1000 Born"},
+    color="GDP per Capita",
+    color_continuous_scale="Viridis"
+)
+```
+
+```{python}
+# Animated scatter: GDP per Capita vs Child Mortality over time
+fig_rel2 = px.scatter(
+    merged,
+    x="GDP per Capita",
+    y="Child Mortality",
+    animation_frame="Year",
+    hover_name="country",
+    size_max=45,
+    title="GDP per Capita vs Child Mortality Over Time",
+    labels={"GDP per Capita": "GDP per Capita (USD)", "Child Mortality": "Deaths per 1000 Born"},
+    color="GDP per Capita",
+    color_continuous_scale="Viridis"
+)
+```
+
+```{python}
+# Correlation over time: How does the relationship change?
+corr_by_year = (
+    merged.groupby("Year")
+    .apply(lambda df: df["GDP per Capita"].corr(df["Child Mortality"]))
+    .reset_index(name="Correlation")
+)
+fig_rel3 = px.line(
+    corr_by_year,
+    x="Year",
+    y="Correlation",
+    title="Correlation between GDP per Capita and Child Mortality Over Time",
+    labels={"Correlation": "Pearson Correlation"}
+)
+```
+
+```{python}
+# Highlight outliers: Countries with high GDP but high child mortality, or vice versa
+outliers = latest_merged[
+    ((latest_merged["GDP per Capita"] > latest_merged["GDP per Capita"].quantile(0.75)) &
+     (latest_merged["Child Mortality"] > latest_merged["Child Mortality"].quantile(0.75))) |
+    ((latest_merged["GDP per Capita"] < latest_merged["GDP per Capita"].quantile(0.25)) &
+     (latest_merged["Child Mortality"] < latest_merged["Child Mortality"].quantile(0.25)))
+]
+```
+
+## Row 1 {height=50%}
+
+### Column {width="50%"}
+```{python}
+fig_rel1
+```
+### Column {width="50%"}
+```{python}
+fig_rel2
+```
+
+
+## Row 2 {height=50%}
+
+### Column {width="80%"}
+```{python}
+fig_rel3
+```
+
+### Column {.tabset width="20%"}
+#### Outliers countries
+```{python}
+itables.show(outliers[["country", "GDP per Capita", "Child Mortality"]].sort_values("Child Mortality", ascending=False))
+```
+
+# Summary of Insights
+
+- **Global Child Mortality Trends**: There has been a significant decline in global average child mortality rates over time, indicating improvements in healthcare and living conditions worldwide.
+
+- **Country-Level Variation**: In 2025, some countries still experience very high child mortality rates, while others have achieved very low rates, highlighting persistent global inequalities.
+
+- **Geographic Patterns**: High child mortality rates are concentrated in specific regions, as shown by the choropleth map, often correlating with lower economic development.
+
+- **Distribution**: The distribution of child mortality rates is right-skewed, with most countries having relatively low rates but a few experiencing much higher rates.
+
+- **GDP per Capita Trends**: Global average GDP per capita has increased over time, reflecting overall economic growth.
+
+- **Top and Bottom Performers**: There is a wide gap between the highest and lowest GDP per capita countries in 2025, emphasizing economic disparities.
+
+- **GDP Distribution**: The distribution of GDP per capita is also right-skewed, with a small number of countries having very high GDP per capita.
+
+- **Relationship Between GDP and Child Mortality**: There is a strong negative correlation between GDP per capita and child mortality—countries with higher GDP per capita tend to have lower child mortality rates.
+
+- **Correlation Over Time**: The negative correlation between GDP per capita and child mortality has remained strong over the years, though the strength of the relationship may fluctuate.
+
+- **Outliers**: Upon analysis no country deviate from the general trend, exhibiting either high GDP with high child mortality or low GDP with low child mortality, suggesting these 2 factors are strongly correlated
+
+- **Overall Insight**: Economic development, as measured by GDP per capita, is closely linked to improvements in child health outcomes, but exceptions exist, indicating the importance of other social, political, and healthcare factors.
