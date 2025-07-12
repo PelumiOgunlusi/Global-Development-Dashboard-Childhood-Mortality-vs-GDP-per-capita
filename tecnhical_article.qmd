@@ -1,0 +1,305 @@
+---
+title: "Global Development Dashboard: Childhood Mortality vs Economic Development"  
+format: html   
+author: PELUMI OGUNLUSI
+echo: false
+message: false
+warning: false
+---
+
+```{python}
+# Importing necessary libraries
+import pandas as pd
+import numpy as np
+import plotly.express as px
+import itables
+import country_converter as coco
+```
+```{python}
+# Load the data
+gdp = pd.read_csv('data/gdp_pcap.csv')
+cmort = pd.read_csv('data/child_mortality_0_5_year_olds_dying_per_1000_born.csv')
+```
+
+```{python}
+# 1. Trend of Child Mortality Over Time (Global)
+cmort_long = cmort.melt(id_vars=['country'], var_name='Year', value_name='Child Mortality')
+cmort_long['Year'] = cmort_long['Year'].astype(int)
+global_trend = cmort_long.groupby('Year')['Child Mortality'].mean().reset_index()
+fig1 = px.line(global_trend, x='Year', y='Child Mortality',
+               title='Global Average Child Mortality Over Time',
+               labels={'Child Mortality': 'Deaths per 1000 Born'})
+```
+
+```{python}
+# 2. Child Mortality by Country (Latest Year)
+latest_data = cmort_long.query("Year == 2025").sort_values(
+    "Child Mortality", ascending=False
+)
+fig2 = px.bar(
+    latest_data.head(20),
+    x="Child Mortality",
+    y="country",
+    title="Top 20 Countries with the highest Childhood Mortality in 2025",
+    labels={"Child Mortality": "Deaths per 1000 Born"},
+)
+```
+
+```{python}
+# 3. Geographic Distribution (Choropleth Map)
+# Convert country names to ISO codes for mapping
+latest_data['iso_alpha'] = coco.convert(names=latest_data['country'], to='ISO3')
+fig3 = px.choropleth(latest_data, locations='iso_alpha', color='Child Mortality',
+                     hover_name='country',
+                     color_continuous_scale='Reds',
+                     title='Global Child Mortality Rates (2025)')
+```
+
+```{python}
+# 4. Distribution of Child Mortality (Histogram)
+fig4 = px.histogram(cmort_long, x='Child Mortality', nbins=50,
+                    title='Distribution of Child Mortality Rates across the entire dataset',
+                    labels={'Child Mortality': 'Deaths per 1000 Born'})
+```
+
+```{python}
+# Compute highest life expectancy
+highest_row = latest_data.head(1).squeeze()
+highest_child_mortality_country = highest_row["country"]
+highest_child_mortality_value = round(highest_row["Child Mortality"], 1)
+```
+
+```{python}
+# Compute lowest life expectancy
+lowest_row = latest_data.sort_values("Child Mortality", ascending=True).head(1).squeeze()
+lowest_child_mortality_country = lowest_row["country"]
+lowest_child_mortality_value = round(lowest_row["Child Mortality"], 1)
+```
+
+```{python}
+# Compute average child mortality across all countries
+Childhood_mean = latest_data["Child Mortality"].mean()
+average_childhood_mortality_value = round(Childhood_mean, 1)
+```
+
+```{python}
+# Preparing GDP data for analysis
+gdp_long = gdp.melt(id_vars=['country'], var_name='Year', value_name='GDP per Capita')
+gdp_long['Year'] = gdp_long['Year'].astype(int)
+```
+
+```{python}
+# Convert 'GDP per Capita' to numeric, handling 'k' and coercing errors
+gdp_long['GDP per Capita'] = gdp_long['GDP per Capita'].astype(str).str.replace('k', 'e3')
+gdp_long['GDP per Capita'] = pd.to_numeric(gdp_long['GDP per Capita'], errors='coerce')
+```
+
+```{python}
+# Global GDP per Capita Trend Over Time
+global_gdp_trend = gdp_long.groupby('Year')['GDP per Capita'].mean().reset_index()
+fig_gdp1 = px.line(global_gdp_trend, x='Year', y='GDP per Capita',
+                   title='Global Average GDP per Capita Over Time',
+                   labels={'GDP per Capita': 'USD'})
+```
+
+```{python}
+# Top 20 Countries by GDP per Capita (Latest Year)
+latest_gdp = gdp_long.query("Year == 2025").sort_values("GDP per Capita", ascending=False)
+fig_gdp2 = px.bar(latest_gdp.head(20), x="GDP per Capita", y="country",
+                  title="Top 20 Countries by GDP per Capita in 2025",
+                  labels={"GDP per Capita": "USD"})
+```
+
+```{python}
+# GDP per Capita Distribution (Histogram)
+fig_gdp3 = px.histogram(gdp_long, x='GDP per Capita', nbins=50,
+                        title='Distribution of GDP per Capita across the entire dataset',
+                        labels={'GDP per Capita': 'USD'})
+```
+
+```{python}
+# GDP per Capita Choropleth Map (Latest Year)
+latest_gdp['iso_alpha'] = coco.convert(names=latest_gdp['country'], to='ISO3')
+fig_gdp4 = px.choropleth(latest_gdp, locations='iso_alpha', color='GDP per Capita',
+                         hover_name='country',
+                         color_continuous_scale='Viridis',
+                         title='Global GDP per Capita (2025)')
+```
+
+```{python}
+# Compute GDP summary statistics for 2025
+highest_gdp_row = latest_gdp.head(1).squeeze()
+highest_gdp_country = highest_gdp_row["country"]
+highest_gdp_value = round(highest_gdp_row["GDP per Capita"], 1)
+
+lowest_gdp_row = latest_gdp.sort_values("GDP per Capita", ascending=True).head(1).squeeze()
+lowest_gdp_country = lowest_gdp_row["country"]
+lowest_gdp_value = round(lowest_gdp_row["GDP per Capita"], 1)
+
+average_gdp_value = round(latest_gdp["GDP per Capita"].mean(), 1)
+```
+
+```{python}
+# Merge GDP and Child Mortality data for analysis
+merged = pd.merge(
+    cmort_long, gdp_long, on=["country", "Year"], how="inner"
+).dropna(subset=["GDP per Capita", "Child Mortality"])
+```
+
+```{python}
+# Scatter plot: GDP per Capita vs Child Mortality (Latest Year)
+latest_merged = merged[merged["Year"] == 2025]
+fig_rel1 = px.scatter(
+    latest_merged,  
+    x="GDP per Capita",
+    y="Child Mortality",
+    trendline='expanding',
+    hover_name="country",
+    title="GDP per Capita vs Child Mortality (2025)",
+    labels={"GDP per Capita": "GDP per Capita (USD)", "Child Mortality": "Deaths per 1000 Born"},
+    color="GDP per Capita",
+    color_continuous_scale="Viridis"
+)
+```
+
+```{python}
+# Animated scatter: GDP per Capita vs Child Mortality over time
+fig_rel2 = px.scatter(
+    merged,
+    x="GDP per Capita",
+    y="Child Mortality",
+    animation_frame="Year",
+    hover_name="country",
+    size_max=45,
+    title="GDP per Capita vs Child Mortality Over Time",
+    labels={"GDP per Capita": "GDP per Capita (USD)", "Child Mortality": "Deaths per 1000 Born"},
+    color="GDP per Capita",
+    color_continuous_scale="Viridis"
+)
+```
+
+```{python}
+# Correlation over time: How does the relationship change?
+corr_by_year = (
+    merged.groupby("Year")
+    .apply(lambda df: df["GDP per Capita"].corr(df["Child Mortality"]))
+    .reset_index(name="Correlation")
+)
+fig_rel3 = px.line(
+    corr_by_year,
+    x="Year",
+    y="Correlation",
+    title="Correlation between GDP per Capita and Child Mortality Over Time",
+    labels={"Correlation": "Pearson Correlation"}
+)
+```
+
+```{python}
+# Highlight outliers: Countries with high GDP but high child mortality, or vice versa
+outliers = latest_merged[
+    ((latest_merged["GDP per Capita"] > latest_merged["GDP per Capita"].quantile(0.75)) &
+     (latest_merged["Child Mortality"] > latest_merged["Child Mortality"].quantile(0.75))) |
+    ((latest_merged["GDP per Capita"] < latest_merged["GDP per Capita"].quantile(0.25)) &
+     (latest_merged["Child Mortality"] < latest_merged["Child Mortality"].quantile(0.25)))
+]
+```
+
+## Introduction
+
+Understanding the relationship between economic development and child health outcomes is crucial for policymakers, researchers, and global health advocates. This project presents an interactive dashboard that visualizes the interplay between childhood mortality rates and GDP per capita across countries and over time. By leveraging open data and modern data visualization tools, the dashboard provides actionable insights into global development patterns and highlights persistent inequalities.
+
+## Defining the Problem
+
+Despite significant progress in global health, childhood mortality remains a pressing issue in many parts of the world. Economic development, often measured by GDP per capita, is widely believed to influence health outcomes, but the strength and nature of this relationship can vary by region and over time. The central problem addressed in this project is: **How does economic development relate to childhood mortality rates globally, and what patterns or outliers exist in this relationship?**
+
+## Method of Approach
+
+The project employs a data-driven approach, using two primary datasets:
+
+- **Child Mortality Data:** Annual childhood mortality rates (deaths per 1,000 live births) by country.
+- **GDP per Capita Data:** Annual GDP per capita figures by country.
+
+The analysis pipeline includes:
+
+1. **Data Preparation:** Data is loaded, cleaned, and transformed into a long format suitable for time series and cross-sectional analysis. Country names are standardized using ISO codes for mapping.
+2. **Visualization:** Plotly Express is used to create interactive line charts, bar charts, histograms, scatter plots, and choropleth maps. These visualizations are embedded in a Quarto dashboard for easy exploration.
+3. **Statistical Analysis:** Summary statistics (mean, min, max) are computed for both indicators. Correlation analysis is performed to quantify the relationship between GDP per capita and child mortality over time.
+4. **Outlier Detection:** Countries that deviate from the general trend (e.g., high GDP with high mortality) are identified for further investigation.
+
+## Findings
+
+The dashboard reveals several key insights:
+[View the interactive dashboard](https://pelumiogunlusi.github.io/Global-Development-Dashboard-Childhood-Mortality-vs-GDP-per-capita/final_project.html)
+
+- **Global Trends:** There has been a marked decline in average childhood mortality rates worldwide, coinciding with rising global GDP per capita.
+
+```{python}
+fig1
+```
+
+```{python}
+fig_gdp1
+```
+- **Country-Level Variation:** In 2025, some countries still face alarmingly high child mortality rates, while others have achieved rates close to zero, underscoring persistent inequalities.
+
+```{python}
+fig3
+```
+
+```{python}
+fig2
+```
+- **Geographic Patterns:** High child mortality rates are concentrated in specific regions, often those with lower economic development.
+
+```{python}
+fig_gdp4
+```
+
+```{python}
+fig_gdp2
+```
+- **Distribution:** Both child mortality and GDP per capita distributions are right-skewed, with a small number of countries experiencing extreme values.
+
+```{python}
+fig4
+```
+
+```{python}
+fig_gdp3
+```
+- **Relationship:** There is a strong negative correlation between GDP per capita and child mortality—countries with higher GDP per capita generally have lower child mortality rates.
+
+```{python}
+fig_rel1
+```
+- **Temporal Dynamics:** The negative correlation has remained robust over time, though its strength fluctuates.
+
+```{python}
+fig_rel2
+```
+
+```{python}
+fig_rel3
+```
+- **Outliers:** The analysis found no significant outliers in 2025, suggesting a strong and consistent relationship between economic development and child health outcomes.
+
+```{python}
+itables.show(
+    outliers[["country", "GDP per Capita", "Child Mortality"]].sort_values(
+        "Child Mortality", ascending=False
+    )
+)
+```
+
+
+## Conclusions
+The analysis confirms a well-established but still critical insight: **Economic development is closely linked to improvements in child health outcomes.** However, the persistence of high child mortality in some countries, despite global progress, highlights the need for targeted interventions. The dashboard serves as a valuable tool for monitoring progress, identifying lagging regions, and informing policy decisions.
+
+## Recommendations
+
+- **Targeted Interventions:** Policymakers should focus on countries and regions with persistently high child mortality rates, even as global averages improve.
+- **Holistic Development:** While economic growth is important, complementary investments in healthcare, education, and infrastructure are essential to further reduce child mortality.
+- **Continuous Monitoring:** Interactive dashboards like this one should be used for ongoing monitoring and evaluation, enabling data-driven decision-making.
+- **Further Research:** Investigate outliers and exceptions to understand the role of non-economic factors (e.g., governance, conflict, health system quality) in shaping child health outcomes.
+
+By making complex data accessible and actionable, this project contributes to the global effort to reduce childhood mortality and promote equitable development.
