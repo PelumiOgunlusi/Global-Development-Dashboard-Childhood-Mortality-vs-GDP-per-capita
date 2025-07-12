@@ -355,3 +355,5 @@ itables.show(outliers[["country", "GDP per Capita", "Child Mortality"]].sort_val
 - **Outliers**: Upon analysis no country deviate from the general trend, exhibiting either high GDP with high child mortality or low GDP with low child mortality, suggesting these 2 factors are strongly correlated
 
 - **Overall Insight**: Economic development, as measured by GDP per capita, is closely linked to improvements in child health outcomes, but exceptions exist, indicating the importance of other social, political, and healthcare factors.
+
+
